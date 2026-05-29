@@ -1,0 +1,22 @@
+@import "tailwindcss";
+
+@layer base {
+  * { box-sizing: border-box; }
+  body { margin: 0; background: #f1f5f9; color: #0f172a; font-family: system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
+  #root { min-height: 100vh; display: flex; flex-direction: column; }
+}
+
+@media print {
+  .no-print { display: none !important; }
+  .print-hidden { display: none !important; }
+  /* Hide the app sidebar when printing */
+  aside { display: none !important; }
+  /* Strip screen-only spacing so proposal-doc fills the full page budget */
+  .proposal-outer { padding: 0 !important; }
+  /* Let printed content fill full width */
+  body { background: white !important; }
+  main { display: block !important; width: 100% !important; }
+  /* Root flex layout → block so main fills page */
+  #root > div { display: block !important; }
+  @page { margin: 0.3in; }
+}
