@@ -48,7 +48,7 @@ interface ItemRowProps {
 function ItemRow({ item, override, onToggleVisibility, onSaveOverride, isEditing, onEdit, onCancelEdit, showPrices, fs, renderText, priceBelowText, showRowBorder }: ItemRowProps) {
   const visible = override ? override.visible : true;
   const displayText = override?.text ?? item.text;
-  const displayPrice = override?.price ?? item.price;
+  const displayPrice = override?.price || item.price;
   // If override has explicitly set priceUnit (even to ''), use that; otherwise fall back to item default
   const displayUnit = override && 'priceUnit' in override ? override.priceUnit : item.priceUnit;
   const [editText, setEditText] = useState(displayText);
