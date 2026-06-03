@@ -672,7 +672,7 @@ export default function ProjectEditor() {
                 id: a.id, section: 'hvacOptions' as const, text: a.name,
                 price: String(a.price), priceUnit: a.priceUnit, isDefault: false, deleted: false, sortOrder: 9999,
               }))
-            );
+            ).sort((a, b) => a.sortOrder - b.sortOrder);
             const bundledTotal = form.bundledAccessories.reduce((sum, b) => {
               const item = proposalItems.find(i => i.id === b.itemId);
               return sum + resolvePrice(b.itemId, item?.price) * b.quantity;
