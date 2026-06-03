@@ -272,62 +272,35 @@ export default function PricingEditor() {
         </p>
       </Card>
 
-      {/* 5. HVAC Add-Ons (calculated) + custom items */}
+      {/* 5. HVAC Add-On Line Items — driven by Proposal Items page */}
       <Card title="HVAC Add-On Line Items" accent="#0891b2">
-        <Row4>
-          {/* Labels come from Proposal Items so they stay in sync */}
-          {(() => {
-            const label = (id: string, fallback: string) =>
-              proposalItems.find(i => i.id === id)?.text ?? fallback;
-            return (
-              <>
-                <Row4>
-                  <PriceField label={label('hvac-2', 'Exhaust Fan + Venting + Grilles')} value={cfg.hvac_exhaustFanWithGrilles} onChange={(v) => set('hvac_exhaustFanWithGrilles', v)} />
-                  <PriceField label={label('hvac-3', 'Exhaust Fan Venting Only')} value={cfg.hvac_exhaustFanVentingOnly} onChange={(v) => set('hvac_exhaustFanVentingOnly', v)} />
-                  <PriceField label={label('hvac-4', 'Cooktop Venting')} value={cfg.hvac_cooktopVentingEach} onChange={(v) => set('hvac_cooktopVentingEach', v)} />
-                  <PriceField label={label('hvac-5', 'Dryer Venting')} value={cfg.hvac_dryerVentingEach} onChange={(v) => set('hvac_dryerVentingEach', v)} />
-                </Row4>
-                <Row4>
-                  <PriceField label={label('hvac-1', 'Ducted Wine Unit')} value={cfg.hvac_ductedWineUnit} onChange={(v) => set('hvac_ductedWineUnit', v)} />
-                  <PriceField label={label('hvac-6', 'Dehumidifier')} value={cfg.hvac_dehumidifierEach} onChange={(v) => set('hvac_dehumidifierEach', v)} />
-                  <PriceField label={label('hvac-7', 'Humidifier')} value={cfg.hvac_humidifierEach} onChange={(v) => set('hvac_humidifierEach', v)} />
-                  <PriceField label={label('hvac-8', 'HEPA Filtration')} value={cfg.hvac_hepaFiltrationEach} onChange={(v) => set('hvac_hepaFiltrationEach', v)} />
-                </Row4>
-                <Row2>
-                  <PriceField label={label('hvac-9', 'Temp Package Unit')} value={cfg.hvac_tempPackageUnit} onChange={(v) => set('hvac_tempPackageUnit', v)} />
-                  <PriceField label={label('hvac-10', 'Extended Warranty')} value={cfg.hvac_extendedWarrantyPerSys} onChange={(v) => set('hvac_extendedWarrantyPerSys', v)} />
-                </Row2>
-              </>
-            );
-          })()}
-
-        {/* Custom add-on items */}
-        <div style={{ borderTop: '1px solid #e2e8f0', marginTop: 16, paddingTop: 14 }}>
-          <div style={{ fontSize: 12, fontWeight: 700, color: '#0891b2', textTransform: 'uppercase', letterSpacing: '0.05em', marginBottom: 10 }}>
-            Custom Items — appear in HVAC Accessories on every proposal
-          </div>
-
-          {addons.length === 0 && (
-            <div style={{ padding: '12px', background: '#f8fafc', borderRadius: 8, border: '1px dashed #cbd5e1', color: '#94a3b8', fontSize: 13, textAlign: 'center', marginBottom: 10 }}>
-              No custom items yet. Click "+ Add Item" to create one.
-            </div>
-          )}
-
-          {addons.map((addon) => (
-            <CustomAddonRow
-              key={addon.id}
-              addon={addon}
-              onChange={updateCustomAddon}
-              onDelete={() => deleteCustomAddon(addon.id)}
-            />
-          ))}
-
-          <button
-            onClick={addCustomAddon}
-            style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#e0f2fe', border: '1px solid #7dd3fc', borderRadius: 7, fontWeight: 600, fontSize: 13, cursor: 'pointer', color: '#0369a1', marginTop: 4 }}
-          >
-            <Plus size={14} /> Add Item
-          </button>
+        <p style={{ margin: '0 0 14px', fontSize: 12.5, color: '#64748b' }}>
+          These prices mirror the <strong>HVAC Accessories</strong> section of Proposal Items. Changes here update there, and vice versa.
+        </p>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 12 }}>
+          {proposalItems
+            .filter(item => item.section === 'hvacOptions' && !item.deleted)
+            .sort((a, b) => a.sortOrder - b.sortOrder)
+            .map(item => {
+              const configField = HVAC_ITEM_PRICE_MAP[item.id];
+              const price = configField
+                ? (cfg[configField] as number)
+                : parseFloat(item.price || '0') || 0;
+              return (
+                <PriceField
+                  key={item.id}
+                  label={item.text}
+                  value={price}
+                  onChange={(v) => {
+                    // Always update proposalItem price
+                    updateProposalItem(item.id, { price: String(v) });
+                    // Also update pricingConfig for mapped items
+                    if (configField) updatePricingConfig({ [configField]: v });
+                    setSaved(false);
+                  }}
+                />
+              );
+            })}
         </div>
       </Card>
 
