@@ -20,6 +20,11 @@ export interface System {
   grilles: number;
 }
 
+export interface BundledAccessory {
+  itemId: string;
+  quantity: number;
+}
+
 export interface ProjectAttachment {
   id: string;
   name: string;
@@ -43,6 +48,7 @@ export interface Project {
   geothermalWells: number;
   proposalOverrides: ProposalOverride[];
   attachments: ProjectAttachment[];
+  bundledAccessories: BundledAccessory[];
   status: 'draft' | 'sent' | 'accepted' | 'declined';
   createdAt: string;
   updatedAt: string;

@@ -178,6 +178,24 @@ export function calculatePrices(inputs: PricingInputs): PricingBreakdown {
   };
 }
 
+// Price lookup for a single HVAC accessory item by its proposal item ID
+export function getHvacAccessoryPrice(itemId: string, cfg: PricingConfig): number {
+  const map: Record<string, number> = {
+    'hvac-1': cfg.hvac_ductedWineUnit,
+    'hvac-2': cfg.hvac_exhaustFanWithGrilles,
+    'hvac-3': cfg.hvac_exhaustFanVentingOnly,
+    'hvac-4': cfg.hvac_cooktopVentingEach,
+    'hvac-5': cfg.hvac_dryerVentingEach,
+    'hvac-6': cfg.hvac_dehumidifierEach,
+    'hvac-7': cfg.hvac_humidifierEach,
+    'hvac-8': cfg.hvac_hepaFiltrationEach,
+    'hvac-9': cfg.hvac_tempPackageUnit,
+    'hvac-10': cfg.hvac_extendedWarrantyPerSys,
+  };
+  if (itemId in map) return map[itemId];
+  return (cfg.customHvacAddons ?? []).find(a => a.id === itemId)?.price ?? 0;
+}
+
 // HVAC add-on pricing (quantity-based line items on proposal)
 export function hvacAddonPrices(breakdown: PricingBreakdown) {
   const cfg = breakdown.config;

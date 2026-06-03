@@ -1,8 +1,8 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { useStore } from '../store/useStore';
-import type { System, ProjectAttachment } from '../types';
-import { calculatePrices, hvacAddonPrices, fmtUSD, toEquipmentSize, effectiveTons } from '../utils/pricing';
+import type { System, ProjectAttachment, BundledAccessory } from '../types';
+import { calculatePrices, hvacAddonPrices, fmtUSD, toEquipmentSize, effectiveTons, getHvacAccessoryPrice } from '../utils/pricing';
 import { Plus, Trash2, ChevronRight, Check, Eye, Printer, Paperclip, FileText, ExternalLink } from 'lucide-react';
 import { supabase } from '../lib/supabase';
 
@@ -113,7 +113,7 @@ export default function ProjectEditor() {
   const { id } = useParams();
   const isNew = !id;
 
-  const { projects, builders, pricingConfig, addProject, updateProject } = useStore();
+  const { projects, builders, pricingConfig, proposalItems, addProject, updateProject } = useStore();
   const existing = projects.find((p) => p.id === id);
 
   const [tab, setTab] = useState<Tab>('details');
@@ -149,6 +149,7 @@ export default function ProjectEditor() {
     geothermalWells: 0,
     proposalOverrides: [] as any[],
     attachments: [] as ProjectAttachment[],
+    bundledAccessories: [] as BundledAccessory[],
   });
 
   useEffect(() => {
@@ -169,6 +170,7 @@ export default function ProjectEditor() {
         geothermalWells: existing.geothermalWells,
         proposalOverrides: existing.proposalOverrides,
         attachments: existing.attachments ?? [],
+        bundledAccessories: existing.bundledAccessories ?? [],
       });
     }
   }, [existing?.id]);
@@ -264,6 +266,22 @@ export default function ProjectEditor() {
   const handleDeleteAttachment = async (attachment: ProjectAttachment) => {
     await supabase.storage.from('drawings').remove([attachment.path]);
     setForm((f) => ({ ...f, attachments: f.attachments.filter((a) => a.id !== attachment.id) }));
+  };
+
+  const toggleBundle = (itemId: string, priceUnit: string | undefined) => {
+    setForm((f) => {
+      const exists = f.bundledAccessories.find((b) => b.itemId === itemId);
+      if (exists) return { ...f, bundledAccessories: f.bundledAccessories.filter((b) => b.itemId !== itemId) };
+      const defaultQty = priceUnit === 'Per System' ? Math.max(1, f.systems.length) : 1;
+      return { ...f, bundledAccessories: [...f.bundledAccessories, { itemId, quantity: defaultQty }] };
+    });
+  };
+
+  const updateBundleQty = (itemId: string, quantity: number) => {
+    setForm((f) => ({
+      ...f,
+      bundledAccessories: f.bundledAccessories.map((b) => b.itemId === itemId ? { ...b, quantity: Math.max(1, quantity) } : b),
+    }));
   };
 
   const save = () => {
@@ -640,30 +658,93 @@ export default function ProjectEditor() {
             )}
           </div>
 
-          {/* Equipment pricing table */}
-          {pricing && (
-            <div style={{ background: 'white', borderRadius: 10, padding: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.07)' }}>
-              <h2 style={{ margin: '0 0 4px', fontSize: 15, fontWeight: 700 }}>Equipment Option Pricing</h2>
-              <p style={{ margin: '0 0 16px', fontSize: 12.5, color: '#94a3b8' }}>
-                Calculated from system data + {Math.round((form.markupPct || 0.08) * 100)}% markup. These prices auto-populate on the proposal.
-              </p>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
-                {([
-                  { label: 'VRV Daikin IV', sublabel: '18.0 EER', price: pricing.prices.vrv, color: '#7c3aed', bg: '#f5f3ff' },
-                  { label: 'Geothermal', sublabel: '27.0 EER', price: pricing.prices.geothermal, color: '#0891b2', bg: '#ecfeff' },
-                  { label: 'Premium Lennox', sublabel: '28.0 SEER', price: pricing.prices.premium, color: '#059669', bg: '#ecfdf5' },
-                  { label: 'Deluxe Lennox', sublabel: '23.0 SEER', price: pricing.prices.deluxe, color: '#2563eb', bg: '#eff6ff' },
-                  { label: 'Standard Lennox', sublabel: '18.0 SEER', price: pricing.prices.standard, color: '#d97706', bg: '#fffbeb' },
-                ] as const).map((tier) => (
-                  <div key={tier.label} style={{ background: tier.bg, borderRadius: 10, padding: '16px 14px', textAlign: 'center', border: `1px solid ${tier.color}22` }}>
-                    <div style={{ fontSize: 12.5, fontWeight: 700, color: tier.color, marginBottom: 2 }}>{tier.label}</div>
-                    <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 10 }}>{tier.sublabel}</div>
-                    <div style={{ fontSize: 22, fontWeight: 800, color: tier.color }}>{fmtUSD(tier.price)}</div>
+          {/* Bundle Accessories into Equipment Options */}
+          {(() => {
+            const bundleableItems = proposalItems.filter(
+              (item) => item.section === 'hvacOptions' && !item.deleted && getHvacAccessoryPrice(item.id, pricingConfig) > 0
+            ).concat(
+              (pricingConfig.customHvacAddons ?? []).filter(a => a.price > 0).map(a => ({
+                id: a.id, section: 'hvacOptions' as const, text: a.name,
+                price: String(a.price), priceUnit: a.priceUnit, isDefault: false, deleted: false, sortOrder: 9999,
+              }))
+            );
+            const bundledTotal = form.bundledAccessories.reduce((sum, b) => {
+              return sum + getHvacAccessoryPrice(b.itemId, pricingConfig) * b.quantity;
+            }, 0);
+            return (
+              <div style={{ background: 'white', borderRadius: 10, padding: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.07)' }}>
+                <h2 style={{ margin: '0 0 4px', fontSize: 15, fontWeight: 700 }}>Bundle Accessories into Equipment Options</h2>
+                <p style={{ margin: '0 0 16px', fontSize: 12.5, color: '#64748b' }}>
+                  Selected accessory costs will be added to each Equipment Option price on the proposal.
+                </p>
+                {bundleableItems.map((item) => {
+                  const bundled = form.bundledAccessories.find((b) => b.itemId === item.id);
+                  const isChecked = !!bundled;
+                  const price = getHvacAccessoryPrice(item.id, pricingConfig);
+                  const needsQty = item.priceUnit === 'Each' || item.priceUnit === 'Per System';
+                  const qty = bundled?.quantity ?? 1;
+                  const total = price * qty;
+                  return (
+                    <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 0', borderBottom: '1px solid #f1f5f9', flexWrap: 'wrap' }}>
+                      <input type="checkbox" checked={isChecked} onChange={() => toggleBundle(item.id, item.priceUnit)}
+                        style={{ width: 16, height: 16, cursor: 'pointer', flexShrink: 0 }} />
+                      <span style={{ flex: 1, fontSize: 13.5, color: '#1e293b', minWidth: 160 }}>{item.text}</span>
+                      <span style={{ fontSize: 13, color: '#64748b', whiteSpace: 'nowrap' }}>
+                        {fmtUSD(price)}{item.priceUnit ? ` / ${item.priceUnit}` : ''}
+                      </span>
+                      {isChecked && needsQty && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontSize: 12, color: '#94a3b8' }}>Qty:</span>
+                          <input type="number" value={qty} min={1} onChange={(e) => updateBundleQty(item.id, +e.target.value)}
+                            style={{ width: 60, padding: '4px 8px', border: '1px solid #3b82f6', borderRadius: 6, fontSize: 13, textAlign: 'center' }} />
+                        </div>
+                      )}
+                      {isChecked && (
+                        <span style={{ fontSize: 13.5, fontWeight: 700, color: '#059669', minWidth: 90, textAlign: 'right' }}>
+                          +{fmtUSD(total)}
+                        </span>
+                      )}
+                    </div>
+                  );
+                })}
+                {bundledTotal > 0 && (
+                  <div style={{ marginTop: 14, paddingTop: 14, borderTop: '2px solid #e2e8f0', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <span style={{ fontSize: 14, fontWeight: 700, color: '#1e293b' }}>Total added to each Equipment Option</span>
+                    <span style={{ fontSize: 16, fontWeight: 800, color: '#059669' }}>+{fmtUSD(bundledTotal)}</span>
                   </div>
-                ))}
+                )}
               </div>
-            </div>
-          )}
+            );
+          })()}
+
+          {/* Equipment pricing table */}
+          {pricing && (() => {
+            const bundledTotal = form.bundledAccessories.reduce((sum, b) =>
+              sum + getHvacAccessoryPrice(b.itemId, pricingConfig) * b.quantity, 0);
+            return (
+              <div style={{ background: 'white', borderRadius: 10, padding: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.07)' }}>
+                <h2 style={{ margin: '0 0 4px', fontSize: 15, fontWeight: 700 }}>Equipment Option Pricing</h2>
+                <p style={{ margin: '0 0 16px', fontSize: 12.5, color: '#94a3b8' }}>
+                  Calculated from system data + {Math.round((form.markupPct || 0.08) * 100)}% markup{bundledTotal > 0 ? ` + ${fmtUSD(bundledTotal)} bundled accessories` : ''}. These prices auto-populate on the proposal.
+                </p>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12 }}>
+                  {([
+                    { label: 'VRV Daikin IV', sublabel: '18.0 EER', price: pricing.prices.vrv + bundledTotal, color: '#7c3aed', bg: '#f5f3ff' },
+                    { label: 'Geothermal', sublabel: '27.0 EER', price: pricing.prices.geothermal + bundledTotal, color: '#0891b2', bg: '#ecfeff' },
+                    { label: 'Premium Lennox', sublabel: '28.0 SEER', price: pricing.prices.premium + bundledTotal, color: '#059669', bg: '#ecfdf5' },
+                    { label: 'Deluxe Lennox', sublabel: '23.0 SEER', price: pricing.prices.deluxe + bundledTotal, color: '#2563eb', bg: '#eff6ff' },
+                    { label: 'Standard Lennox', sublabel: '18.0 SEER', price: pricing.prices.standard + bundledTotal, color: '#d97706', bg: '#fffbeb' },
+                  ] as const).map((tier) => (
+                    <div key={tier.label} style={{ background: tier.bg, borderRadius: 10, padding: '16px 14px', textAlign: 'center', border: `1px solid ${tier.color}22` }}>
+                      <div style={{ fontSize: 12.5, fontWeight: 700, color: tier.color, marginBottom: 2 }}>{tier.label}</div>
+                      <div style={{ fontSize: 11, color: '#94a3b8', marginBottom: 10 }}>{tier.sublabel}</div>
+                      <div style={{ fontSize: 22, fontWeight: 800, color: tier.color }}>{fmtUSD(tier.price)}</div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            );
+          })()}
         </div>
       )}
 

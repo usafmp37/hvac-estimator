@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useStore, getSectionItems } from '../store/useStore';
 import type { ProposalItem, SectionKey, CustomHvacAddon } from '../types';
-import { calculatePrices, hvacAddonPrices } from '../utils/pricing';
+import { calculatePrices, hvacAddonPrices, getHvacAccessoryPrice } from '../utils/pricing';
 import { Eye, EyeOff, Edit2, Check, X, Plus, Printer, ChevronRight, FileDown } from 'lucide-react';
 
 const SECTION_LABELS: Record<SectionKey, string> = {
@@ -192,9 +192,15 @@ export default function ProposalPage() {
   const numDryers = pricing?.numDryers ?? 0;
   const numCooktops = pricing?.numCooktops ?? 0;
 
+  const bundledTotal = (project.bundledAccessories ?? []).reduce((sum, b) =>
+    sum + getHvacAccessoryPrice(b.itemId, pricingConfig) * b.quantity, 0);
+
   const calcEquipPrices: Record<string, number | undefined> = pricing ? {
-    'eq-1': pricing.prices.vrv, 'eq-2': pricing.prices.geothermal,
-    'eq-3': pricing.prices.premium, 'eq-4': pricing.prices.deluxe, 'eq-5': pricing.prices.standard,
+    'eq-1': pricing.prices.vrv + bundledTotal,
+    'eq-2': pricing.prices.geothermal + bundledTotal,
+    'eq-3': pricing.prices.premium + bundledTotal,
+    'eq-4': pricing.prices.deluxe + bundledTotal,
+    'eq-5': pricing.prices.standard + bundledTotal,
   } : {};
 
   const calcHvacPrices: Record<string, number | undefined> = addons ? {
