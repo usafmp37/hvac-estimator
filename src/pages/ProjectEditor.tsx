@@ -660,8 +660,13 @@ export default function ProjectEditor() {
 
           {/* Bundle Accessories into Equipment Options */}
           {(() => {
+            // Helper: get price from config map first, fall back to item's stored price
+            const resolvePrice = (itemId: string, storedPrice?: string) =>
+              getHvacAccessoryPrice(itemId, pricingConfig) || parseFloat(storedPrice || '0') || 0;
+
             const bundleableItems = proposalItems.filter(
-              (item) => item.section === 'hvacOptions' && !item.deleted && getHvacAccessoryPrice(item.id, pricingConfig) > 0
+              (item) => item.section === 'hvacOptions' && !item.deleted &&
+                resolvePrice(item.id, item.price) > 0
             ).concat(
               (pricingConfig.customHvacAddons ?? []).filter(a => a.price > 0).map(a => ({
                 id: a.id, section: 'hvacOptions' as const, text: a.name,
@@ -669,7 +674,8 @@ export default function ProjectEditor() {
               }))
             );
             const bundledTotal = form.bundledAccessories.reduce((sum, b) => {
-              return sum + getHvacAccessoryPrice(b.itemId, pricingConfig) * b.quantity;
+              const item = proposalItems.find(i => i.id === b.itemId);
+              return sum + resolvePrice(b.itemId, item?.price) * b.quantity;
             }, 0);
             return (
               <div style={{ background: 'white', borderRadius: 10, padding: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.07)' }}>
@@ -680,7 +686,7 @@ export default function ProjectEditor() {
                 {bundleableItems.map((item) => {
                   const bundled = form.bundledAccessories.find((b) => b.itemId === item.id);
                   const isChecked = !!bundled;
-                  const price = getHvacAccessoryPrice(item.id, pricingConfig);
+                  const price = resolvePrice(item.id, item.price);
                   const needsQty = item.priceUnit === 'Each' || item.priceUnit === 'Per System';
                   const qty = bundled?.quantity ?? 1;
                   const total = price * qty;
@@ -719,8 +725,10 @@ export default function ProjectEditor() {
 
           {/* Equipment pricing table */}
           {pricing && (() => {
-            const bundledTotal = form.bundledAccessories.reduce((sum, b) =>
-              sum + getHvacAccessoryPrice(b.itemId, pricingConfig) * b.quantity, 0);
+            const bundledTotal = form.bundledAccessories.reduce((sum, b) => {
+              const item = proposalItems.find(i => i.id === b.itemId);
+              return sum + (getHvacAccessoryPrice(b.itemId, pricingConfig) || parseFloat(item?.price || '0') || 0) * b.quantity;
+            }, 0);
             return (
               <div style={{ background: 'white', borderRadius: 10, padding: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.07)' }}>
                 <h2 style={{ margin: '0 0 4px', fontSize: 15, fontWeight: 700 }}>Equipment Option Pricing</h2>

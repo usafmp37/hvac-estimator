@@ -192,8 +192,10 @@ export default function ProposalPage() {
   const numDryers = pricing?.numDryers ?? 0;
   const numCooktops = pricing?.numCooktops ?? 0;
 
-  const bundledTotal = (project.bundledAccessories ?? []).reduce((sum, b) =>
-    sum + getHvacAccessoryPrice(b.itemId, pricingConfig) * b.quantity, 0);
+  const bundledTotal = (project.bundledAccessories ?? []).reduce((sum, b) => {
+    const item = proposalItems.find(i => i.id === b.itemId);
+    return sum + (getHvacAccessoryPrice(b.itemId, pricingConfig) || parseFloat(item?.price || '0') || 0) * b.quantity;
+  }, 0);
 
   const calcEquipPrices: Record<string, number | undefined> = pricing ? {
     'eq-1': pricing.prices.vrv + bundledTotal,
