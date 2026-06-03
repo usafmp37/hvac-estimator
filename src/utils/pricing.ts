@@ -1,6 +1,21 @@
 import type { System, PricingConfig } from '../types';
 import { DEFAULT_PRICING_CONFIG } from '../types';
 
+// Maps proposal item ID → pricingConfig field name for HVAC accessories
+// Used to keep ProposalItemsPage and PricingEditor in sync
+export const HVAC_ITEM_PRICE_MAP: Record<string, keyof PricingConfig> = {
+  'hvac-1':  'hvac_ductedWineUnit',
+  'hvac-2':  'hvac_exhaustFanWithGrilles',
+  'hvac-3':  'hvac_exhaustFanVentingOnly',
+  'hvac-4':  'hvac_cooktopVentingEach',
+  'hvac-5':  'hvac_dryerVentingEach',
+  'hvac-6':  'hvac_dehumidifierEach',
+  'hvac-7':  'hvac_humidifierEach',
+  'hvac-8':  'hvac_hepaFiltrationEach',
+  'hvac-9':  'hvac_tempPackageUnit',
+  'hvac-10': 'hvac_extendedWarrantyPerSys',
+};
+
 const EQUIPMENT_SIZES = [1.5, 2.0, 2.5, 3.0, 3.5, 4.0, 4.5, 5.0];
 
 // Round tons UP to the nearest available equipment size

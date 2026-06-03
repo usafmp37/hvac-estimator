@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useStore, getSectionItems } from '../store/useStore';
 import type { SectionKey, ProposalItem } from '../types';
+import { HVAC_ITEM_PRICE_MAP } from '../utils/pricing';
 import { Plus, Trash2, Edit2, Check, X, ChevronUp, ChevronDown, AlertCircle } from 'lucide-react';
 
 const SECTIONS: { key: SectionKey; label: string; hasPrice: boolean }[] = [
@@ -89,7 +90,7 @@ function ItemRow({
 }
 
 export default function ProposalItemsPage() {
-  const { proposalItems, addProposalItem, updateProposalItem, deleteProposalItem, reorderProposalItem } = useStore();
+  const { proposalItems, addProposalItem, updateProposalItem, deleteProposalItem, reorderProposalItem, updatePricingConfig } = useStore();
   const [addingSection, setAddingSection] = useState<SectionKey | null>(null);
   const [newText, setNewText] = useState('');
   const [newPrice, setNewPrice] = useState('');
@@ -132,7 +133,12 @@ export default function ProposalItemsPage() {
                 key={item.id}
                 item={item}
                 hasPrice={hasPrice}
-                onSave={(text, price, unit) => updateProposalItem(item.id, { text, price: price || undefined, priceUnit: unit || undefined })}
+                onSave={(text, price, unit) => {
+                  updateProposalItem(item.id, { text, price: price || undefined, priceUnit: unit || undefined });
+                  // Keep pricingConfig in sync for mapped HVAC items
+                  const configField = HVAC_ITEM_PRICE_MAP[item.id];
+                  if (configField && price) updatePricingConfig({ [configField]: parseFloat(price) });
+                }}
                 onDelete={() => { if (confirm(`Delete "${item.text}"? This removes it from all future proposals.`)) deleteProposalItem(item.id); }}
                 onMoveUp={() => reorderProposalItem(item.id, 'up')}
                 onMoveDown={() => reorderProposalItem(item.id, 'down')}

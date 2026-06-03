@@ -3,6 +3,7 @@ import { useStore } from '../store/useStore';
 import { DEFAULT_PRICING_CONFIG } from '../types';
 import type { PricingConfig, CustomHvacAddon } from '../types';
 import { RotateCcw, Save, Plus, Trash2 } from 'lucide-react';
+import { HVAC_ITEM_PRICE_MAP } from '../utils/pricing';
 
 const EQUIPMENT_SIZES = ['1.5', '2.0', '2.5', '3.0', '3.5', '4.0', '4.5', '5.0'];
 const uid = () => Math.random().toString(36).slice(2, 10);
@@ -124,11 +125,21 @@ function CustomAddonRow({ addon, onChange, onDelete }: {
 // ── main component ────────────────────────────────────────────────────────────
 
 export default function PricingEditor() {
-  const { pricingConfig, updatePricingConfig, resetPricingConfig } = useStore();
+  const { pricingConfig, updatePricingConfig, resetPricingConfig, proposalItems, updateProposalItem } = useStore();
   const [saved, setSaved] = useState(false);
+
+  // Reverse map: pricingConfig key → proposal item ID
+  const configToItemId = Object.fromEntries(
+    Object.entries(HVAC_ITEM_PRICE_MAP).map(([itemId, cfgKey]) => [cfgKey, itemId])
+  );
 
   function set<K extends keyof PricingConfig>(key: K, value: PricingConfig[K]) {
     updatePricingConfig({ [key]: value });
+    // Keep proposalItem price in sync for mapped HVAC fields
+    const itemId = configToItemId[key as string];
+    if (itemId && typeof value === 'number') {
+      updateProposalItem(itemId, { price: String(value) });
+    }
     setSaved(false);
   }
 
@@ -264,21 +275,31 @@ export default function PricingEditor() {
       {/* 5. HVAC Add-Ons (calculated) + custom items */}
       <Card title="HVAC Add-On Line Items" accent="#0891b2">
         <Row4>
-          <PriceField label="Exhaust Fan + Venting + Grilles (per fan)" value={cfg.hvac_exhaustFanWithGrilles} onChange={(v) => set('hvac_exhaustFanWithGrilles', v)} />
-          <PriceField label="Exhaust Fan Venting Only (per fan)" value={cfg.hvac_exhaustFanVentingOnly} onChange={(v) => set('hvac_exhaustFanVentingOnly', v)} />
-          <PriceField label="Cooktop Venting (each)" value={cfg.hvac_cooktopVentingEach} onChange={(v) => set('hvac_cooktopVentingEach', v)} />
-          <PriceField label="Dryer Venting (each)" value={cfg.hvac_dryerVentingEach} onChange={(v) => set('hvac_dryerVentingEach', v)} />
-        </Row4>
-        <Row4>
-          <PriceField label="Ducted Wine Unit (flat)" value={cfg.hvac_ductedWineUnit} onChange={(v) => set('hvac_ductedWineUnit', v)} />
-          <PriceField label="Dehumidifier (each)" value={cfg.hvac_dehumidifierEach} onChange={(v) => set('hvac_dehumidifierEach', v)} />
-          <PriceField label="Humidifier (each)" value={cfg.hvac_humidifierEach} onChange={(v) => set('hvac_humidifierEach', v)} />
-          <PriceField label="HEPA Filtration (each)" value={cfg.hvac_hepaFiltrationEach} onChange={(v) => set('hvac_hepaFiltrationEach', v)} />
-        </Row4>
-        <Row2>
-          <PriceField label="Temp Package Unit (each)" value={cfg.hvac_tempPackageUnit} onChange={(v) => set('hvac_tempPackageUnit', v)} />
-          <PriceField label="Extended Warranty (per system)" value={cfg.hvac_extendedWarrantyPerSys} onChange={(v) => set('hvac_extendedWarrantyPerSys', v)} />
-        </Row2>
+          {/* Labels come from Proposal Items so they stay in sync */}
+          {(() => {
+            const label = (id: string, fallback: string) =>
+              proposalItems.find(i => i.id === id)?.text ?? fallback;
+            return (
+              <>
+                <Row4>
+                  <PriceField label={label('hvac-2', 'Exhaust Fan + Venting + Grilles')} value={cfg.hvac_exhaustFanWithGrilles} onChange={(v) => set('hvac_exhaustFanWithGrilles', v)} />
+                  <PriceField label={label('hvac-3', 'Exhaust Fan Venting Only')} value={cfg.hvac_exhaustFanVentingOnly} onChange={(v) => set('hvac_exhaustFanVentingOnly', v)} />
+                  <PriceField label={label('hvac-4', 'Cooktop Venting')} value={cfg.hvac_cooktopVentingEach} onChange={(v) => set('hvac_cooktopVentingEach', v)} />
+                  <PriceField label={label('hvac-5', 'Dryer Venting')} value={cfg.hvac_dryerVentingEach} onChange={(v) => set('hvac_dryerVentingEach', v)} />
+                </Row4>
+                <Row4>
+                  <PriceField label={label('hvac-1', 'Ducted Wine Unit')} value={cfg.hvac_ductedWineUnit} onChange={(v) => set('hvac_ductedWineUnit', v)} />
+                  <PriceField label={label('hvac-6', 'Dehumidifier')} value={cfg.hvac_dehumidifierEach} onChange={(v) => set('hvac_dehumidifierEach', v)} />
+                  <PriceField label={label('hvac-7', 'Humidifier')} value={cfg.hvac_humidifierEach} onChange={(v) => set('hvac_humidifierEach', v)} />
+                  <PriceField label={label('hvac-8', 'HEPA Filtration')} value={cfg.hvac_hepaFiltrationEach} onChange={(v) => set('hvac_hepaFiltrationEach', v)} />
+                </Row4>
+                <Row2>
+                  <PriceField label={label('hvac-9', 'Temp Package Unit')} value={cfg.hvac_tempPackageUnit} onChange={(v) => set('hvac_tempPackageUnit', v)} />
+                  <PriceField label={label('hvac-10', 'Extended Warranty')} value={cfg.hvac_extendedWarrantyPerSys} onChange={(v) => set('hvac_extendedWarrantyPerSys', v)} />
+                </Row2>
+              </>
+            );
+          })()}
 
         {/* Custom add-on items */}
         <div style={{ borderTop: '1px solid #e2e8f0', marginTop: 16, paddingTop: 14 }}>
