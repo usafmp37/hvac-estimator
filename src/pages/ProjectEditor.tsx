@@ -268,11 +268,25 @@ export default function ProjectEditor() {
     setForm((f) => ({ ...f, attachments: f.attachments.filter((a) => a.id !== attachment.id) }));
   };
 
+  // Returns the auto-calculated system quantity for items tied to system inputs,
+  // or null for items where the user specifies their own quantity.
+  const getSystemQty = (itemId: string): number | null => {
+    const map: Record<string, number> = {
+      'hvac-2': totalExhaust,
+      'hvac-3': totalExhaust,
+      'hvac-4': totalCooktop,
+      'hvac-5': totalDryer,
+    };
+    return itemId in map ? map[itemId] : null;
+  };
+
   const toggleBundle = (itemId: string, priceUnit: string | undefined) => {
     setForm((f) => {
       const exists = f.bundledAccessories.find((b) => b.itemId === itemId);
       if (exists) return { ...f, bundledAccessories: f.bundledAccessories.filter((b) => b.itemId !== itemId) };
-      const defaultQty = priceUnit === 'Per System' ? Math.max(1, f.systems.length) : 1;
+      const sysQty = getSystemQty(itemId);
+      const defaultQty = sysQty !== null ? sysQty
+        : priceUnit === 'Per System' ? Math.max(1, f.systems.length) : 1;
       return { ...f, bundledAccessories: [...f.bundledAccessories, { itemId, quantity: defaultQty }] };
     });
   };
@@ -675,7 +689,8 @@ export default function ProjectEditor() {
             ).sort((a, b) => a.sortOrder - b.sortOrder);
             const bundledTotal = form.bundledAccessories.reduce((sum, b) => {
               const item = proposalItems.find(i => i.id === b.itemId);
-              return sum + resolvePrice(b.itemId, item?.price) * b.quantity;
+              const qty = getSystemQty(b.itemId) ?? b.quantity;
+              return sum + resolvePrice(b.itemId, item?.price) * qty;
             }, 0);
             return (
               <div style={{ background: 'white', borderRadius: 10, padding: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.07)' }}>
@@ -687,8 +702,9 @@ export default function ProjectEditor() {
                   const bundled = form.bundledAccessories.find((b) => b.itemId === item.id);
                   const isChecked = !!bundled;
                   const price = resolvePrice(item.id, item.price);
-                  const needsQty = item.priceUnit === 'Each' || item.priceUnit === 'Per System';
-                  const qty = bundled?.quantity ?? 1;
+                  const autoQty = getSystemQty(item.id);
+                  const needsQty = autoQty === null && (item.priceUnit === 'Each' || item.priceUnit === 'Per System');
+                  const qty = autoQty !== null ? autoQty : (bundled?.quantity ?? 1);
                   const total = price * qty;
                   return (
                     <div key={item.id} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 0', borderBottom: '1px solid #f1f5f9', flexWrap: 'wrap' }}>
@@ -698,6 +714,13 @@ export default function ProjectEditor() {
                       <span style={{ fontSize: 13, color: '#64748b', whiteSpace: 'nowrap' }}>
                         {fmtUSD(price)}{item.priceUnit ? ` / ${item.priceUnit}` : ''}
                       </span>
+                      {isChecked && autoQty !== null && (
+                        <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                          <span style={{ fontSize: 12, background: '#f1f5f9', color: '#475569', padding: '3px 8px', borderRadius: 5, fontWeight: 600 }}>
+                            Qty: {autoQty} (from systems)
+                          </span>
+                        </div>
+                      )}
                       {isChecked && needsQty && (
                         <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
                           <span style={{ fontSize: 12, color: '#94a3b8' }}>Qty:</span>
@@ -727,7 +750,9 @@ export default function ProjectEditor() {
           {pricing && (() => {
             const bundledTotal = form.bundledAccessories.reduce((sum, b) => {
               const item = proposalItems.find(i => i.id === b.itemId);
-              return sum + (getHvacAccessoryPrice(b.itemId, pricingConfig) || parseFloat(item?.price || '0') || 0) * b.quantity;
+              const price = getHvacAccessoryPrice(b.itemId, pricingConfig) || parseFloat(item?.price || '0') || 0;
+              const qty = getSystemQty(b.itemId) ?? b.quantity;
+              return sum + price * qty;
             }, 0);
             return (
               <div style={{ background: 'white', borderRadius: 10, padding: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.07)' }}>

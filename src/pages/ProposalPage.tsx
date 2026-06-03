@@ -194,7 +194,16 @@ export default function ProposalPage() {
 
   const bundledTotal = (project.bundledAccessories ?? []).reduce((sum, b) => {
     const item = proposalItems.find(i => i.id === b.itemId);
-    return sum + (getHvacAccessoryPrice(b.itemId, pricingConfig) || parseFloat(item?.price || '0') || 0) * b.quantity;
+    const price = getHvacAccessoryPrice(b.itemId, pricingConfig) || parseFloat(item?.price || '0') || 0;
+    // Use system-calculated quantities for items tied to system inputs
+    const systemQtyMap: Record<string, number> = {
+      'hvac-2': pricing?.numExhaustFans ?? 0,
+      'hvac-3': pricing?.numExhaustFans ?? 0,
+      'hvac-4': pricing?.numCooktops ?? 0,
+      'hvac-5': pricing?.numDryers ?? 0,
+    };
+    const qty = b.itemId in systemQtyMap ? systemQtyMap[b.itemId] : b.quantity;
+    return sum + price * qty;
   }, 0);
 
   const calcEquipPrices: Record<string, number | undefined> = pricing ? {
@@ -469,7 +478,10 @@ export default function ProposalPage() {
                   {/* Section content */}
                   <div style={{ padding: `0 ${3 * fs}px ${1.5 * fs}px` }}>
 
-                  {items.map((item) => {
+                  {/* Filter out bundled items from HVAC Accessories */}
+                  {items
+                    .filter(item => section !== 'hvacOptions' || !(project.bundledAccessories ?? []).some(b => b.itemId === item.id))
+                    .map((item) => {
                     const override = getOverride(item.id);
                     const calcPrice = section === 'equipmentOptions' ? calcEquipPrices[item.id]
                       : section === 'hvacOptions' ? calcHvacPrices[item.id] : undefined;
@@ -479,7 +491,6 @@ export default function ProposalPage() {
                     const finalItem = dynText && !override?.text
                       ? { ...effectiveItem, text: dynText } : effectiveItem;
 
-                    // VRV: split warranty info onto its own line for readability
                     const renderText = item.id === 'eq-1' && !override?.text
                       ? vrvLineBreak(finalItem.text) : undefined;
 
@@ -502,8 +513,44 @@ export default function ProposalPage() {
                     );
                   })}
 
-                  {/* Custom add-ons from Pricing Editor — only in HVAC Options */}
-                  {section === 'hvacOptions' && customAddons.map((addon) => {
+                  {/* Bundled accessories appear in Scope of Work */}
+                  {section === 'scopeOfWork' && (project.bundledAccessories ?? []).map((ba) => {
+                    const srcItem = proposalItems.find(i => i.id === ba.itemId)
+                      ?? addonToItem(customAddons.find(a => a.id === ba.itemId)!);
+                    if (!srcItem) return null;
+                    const override = getOverride(`sow-bundled-${ba.itemId}`);
+                    const systemQtyMap: Record<string, number> = {
+                      'hvac-2': pricing?.numExhaustFans ?? 0,
+                      'hvac-3': pricing?.numExhaustFans ?? 0,
+                      'hvac-4': pricing?.numCooktops ?? 0,
+                      'hvac-5': pricing?.numDryers ?? 0,
+                    };
+                    const qty = ba.itemId in systemQtyMap ? systemQtyMap[ba.itemId] : ba.quantity;
+                    const baseText = dynamicText[ba.itemId] ?? srcItem.text;
+                    const scopeText = qty > 1 && !(ba.itemId in systemQtyMap)
+                      ? `${baseText} (${qty})` : baseText;
+                    const virtualItem = { ...srcItem, id: `sow-bundled-${ba.itemId}`, section: 'scopeOfWork' as const, price: undefined, priceUnit: undefined };
+                    return (
+                      <ItemRow
+                        key={`sow-bundled-${ba.itemId}`}
+                        item={virtualItem}
+                        override={override}
+                        onToggleVisibility={() => toggleVisibility(`sow-bundled-${ba.itemId}`)}
+                        onSaveOverride={(text, price, unit) => saveOverride(`sow-bundled-${ba.itemId}`, text, price, unit)}
+                        isEditing={editingItemId === `sow-bundled-${ba.itemId}`}
+                        onEdit={() => setEditingItemId(`sow-bundled-${ba.itemId}`)}
+                        onCancelEdit={() => setEditingItemId(null)}
+                        showPrices={false}
+                        fs={fs}
+                        renderText={<span>{override?.text ?? scopeText}</span>}
+                      />
+                    );
+                  })}
+
+                  {/* Custom add-ons — only in HVAC Accessories, hide if bundled */}
+                  {section === 'hvacOptions' && customAddons
+                    .filter(addon => !(project.bundledAccessories ?? []).some(b => b.itemId === addon.id))
+                    .map((addon) => {
                     const item = addonToItem(addon);
                     const override = getOverride(addon.id);
                     return (
