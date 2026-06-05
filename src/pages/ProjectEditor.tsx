@@ -150,6 +150,8 @@ export default function ProjectEditor() {
     proposalOverrides: [] as any[],
     attachments: [] as ProjectAttachment[],
     bundledAccessories: [] as BundledAccessory[],
+    coverPhotoUrl: '',
+    coverPhotoPath: '',
   });
 
   useEffect(() => {
@@ -171,6 +173,8 @@ export default function ProjectEditor() {
         proposalOverrides: existing.proposalOverrides,
         attachments: existing.attachments ?? [],
         bundledAccessories: existing.bundledAccessories ?? [],
+        coverPhotoUrl: existing.coverPhotoUrl ?? '',
+        coverPhotoPath: existing.coverPhotoPath ?? '',
       });
     }
   }, [existing?.id]);
@@ -266,6 +270,44 @@ export default function ProjectEditor() {
   const handleDeleteAttachment = async (attachment: ProjectAttachment) => {
     await supabase.storage.from('drawings').remove([attachment.path]);
     setForm((f) => ({ ...f, attachments: f.attachments.filter((a) => a.id !== attachment.id) }));
+  };
+
+  const [coverUploading, setCoverUploading] = useState(false);
+  const [coverUploadError, setCoverUploadError] = useState<string | null>(null);
+
+  const handleCoverPhotoUpload = async (files: FileList | null) => {
+    if (!files || files.length === 0 || !id) return;
+    const file = files[0];
+    if (!file.type.startsWith('image/')) {
+      setCoverUploadError('Only image files are supported (JPG, PNG, WEBP).');
+      return;
+    }
+    setCoverUploading(true);
+    setCoverUploadError(null);
+    // Delete old cover photo if one exists
+    if (form.coverPhotoPath) {
+      await supabase.storage.from('drawings').remove([form.coverPhotoPath]);
+    }
+    const ext = file.name.split('.').pop() ?? 'jpg';
+    const path = `covers/${id}/cover.${ext}`;
+    const { error } = await supabase.storage.from('drawings').upload(path, file, { upsert: true });
+    if (error) {
+      setCoverUploadError(`Upload failed: ${error.message}`);
+      setCoverUploading(false);
+      return;
+    }
+    const { data: urlData } = supabase.storage.from('drawings').getPublicUrl(path);
+    // Append cache-bust timestamp so the <img> always refreshes after re-upload
+    const url = urlData.publicUrl + '?t=' + Date.now();
+    setForm((f) => ({ ...f, coverPhotoUrl: url, coverPhotoPath: path }));
+    setCoverUploading(false);
+  };
+
+  const handleDeleteCoverPhoto = async () => {
+    if (form.coverPhotoPath) {
+      await supabase.storage.from('drawings').remove([form.coverPhotoPath]);
+    }
+    setForm((f) => ({ ...f, coverPhotoUrl: '', coverPhotoPath: '' }));
   };
 
   // Returns the auto-calculated system quantity for items tied to system inputs,
@@ -784,7 +826,69 @@ export default function ProjectEditor() {
       {/* ── TAB: Drawings ── */}
       {tab === 'drawings' && (
         <div>
-          {/* Upload area */}
+
+          {/* ── Cover Photo card ── */}
+          <div style={{ background: 'white', borderRadius: 10, padding: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.07)', marginBottom: 20 }}>
+            <h2 style={{ margin: '0 0 4px', fontSize: 15, fontWeight: 700, color: '#1e293b' }}>Cover Photo</h2>
+            <p style={{ margin: '0 0 16px', fontSize: 13, color: '#64748b' }}>
+              Upload a project rendering or photo to display on the cover page. JPG, PNG, or WEBP.
+            </p>
+
+            {isNew ? (
+              <div style={{ padding: '14px', background: '#fffbeb', border: '1px solid #fde68a', borderRadius: 8, fontSize: 13, color: '#92400e' }}>
+                Save the estimate with a project name first, then you can upload a cover photo.
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: 20, alignItems: 'flex-start', flexWrap: 'wrap' }}>
+                {/* Upload button */}
+                <label style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 8,
+                  padding: '9px 18px',
+                  background: coverUploading ? '#e0f2fe' : '#f0fdf4',
+                  border: '2px dashed ' + (coverUploading ? '#7dd3fc' : '#86efac'),
+                  borderRadius: 8,
+                  fontWeight: 600, fontSize: 13.5,
+                  color: coverUploading ? '#0369a1' : '#15803d',
+                  cursor: coverUploading ? 'not-allowed' : 'pointer',
+                  flexShrink: 0,
+                }}>
+                  🖼 {coverUploading ? 'Uploading…' : form.coverPhotoUrl ? 'Replace Photo' : 'Upload Photo'}
+                  <input
+                    type="file"
+                    accept="image/jpeg,image/png,image/webp,image/gif"
+                    disabled={coverUploading}
+                    style={{ display: 'none' }}
+                    onChange={(e) => handleCoverPhotoUpload(e.target.files)}
+                  />
+                </label>
+
+                {/* Preview + delete */}
+                {form.coverPhotoUrl && (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+                    <img
+                      src={form.coverPhotoUrl}
+                      alt="Cover"
+                      style={{ height: 120, maxWidth: 240, objectFit: 'cover', borderRadius: 8, border: '1px solid #e2e8f0', display: 'block' }}
+                    />
+                    <button
+                      onClick={handleDeleteCoverPhoto}
+                      style={{ display: 'inline-flex', alignItems: 'center', gap: 5, padding: '5px 12px', background: '#fef2f2', color: '#ef4444', border: '1px solid #fecaca', borderRadius: 6, fontWeight: 600, fontSize: 12.5, cursor: 'pointer' }}
+                    >
+                      <Trash2 size={12} /> Remove Photo
+                    </button>
+                  </div>
+                )}
+              </div>
+            )}
+
+            {coverUploadError && (
+              <div style={{ marginTop: 10, padding: '8px 12px', background: '#fef2f2', border: '1px solid #fecaca', borderRadius: 7, fontSize: 13, color: '#b91c1c' }}>
+                {coverUploadError}
+              </div>
+            )}
+          </div>
+
+          {/* ── PDF Drawings card ── */}
           <div style={{ background: 'white', borderRadius: 10, padding: 24, boxShadow: '0 1px 3px rgba(0,0,0,0.07)', marginBottom: 20 }}>
             <h2 style={{ margin: '0 0 6px', fontSize: 15, fontWeight: 700, color: '#1e293b' }}>PDF Drawings</h2>
             <p style={{ margin: '0 0 18px', fontSize: 13, color: '#64748b' }}>

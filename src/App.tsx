@@ -10,6 +10,7 @@ import BuildersPage from './pages/BuildersPage';
 import ProposalItemsPage from './pages/ProposalItemsPage';
 import SettingsPage from './pages/SettingsPage';
 import PricingEditor from './pages/PricingEditor';
+import CoverPage from './pages/CoverPage';
 
 function AppRoutes() {
   const { user, loading } = useAuth();
@@ -33,6 +34,7 @@ function AppRoutes() {
             <Route path="projects/new" element={<ProjectEditor />} />
             <Route path="projects/:id" element={<ProjectEditor />} />
             <Route path="projects/:id/proposal" element={<ProposalPage />} />
+            <Route path="projects/:id/cover" element={<CoverPage />} />
             <Route path="builders" element={<BuildersPage />} />
             <Route path="proposal-items" element={<ProposalItemsPage />} />
             <Route path="pricing" element={<PricingEditor />} />

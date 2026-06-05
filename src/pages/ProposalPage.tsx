@@ -3,7 +3,7 @@ import { useParams, Link } from 'react-router-dom';
 import { useStore, getSectionItems } from '../store/useStore';
 import type { ProposalItem, SectionKey, CustomHvacAddon } from '../types';
 import { calculatePrices, hvacAddonPrices, getHvacAccessoryPrice } from '../utils/pricing';
-import { Eye, EyeOff, Edit2, Check, X, Plus, Printer, ChevronRight, FileDown } from 'lucide-react';
+import { Eye, EyeOff, Edit2, Check, X, Plus, Printer, ChevronRight, FileDown, BookOpen } from 'lucide-react';
 
 const SECTION_LABELS: Record<SectionKey, string> = {
   scopeOfWork: 'Scope of Work',
@@ -351,6 +351,9 @@ export default function ProposalPage() {
             </span>
             <Link to={`/projects/${id}`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: '#f1f5f9', color: '#1e293b', borderRadius: 7, textDecoration: 'none', fontWeight: 600, fontSize: 13 }}>
               ← Edit Details
+            </Link>
+            <Link to={`/projects/${id}/cover`} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: '#f0fdf4', color: '#15803d', borderRadius: 7, textDecoration: 'none', fontWeight: 600, fontSize: 13 }}>
+              <BookOpen size={14} /> Cover Page
             </Link>
             <button onClick={() => window.print()} style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#1e293b', color: 'white', border: 'none', borderRadius: 7, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}>
               <Printer size={14} /> Print / PDF

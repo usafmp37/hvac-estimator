@@ -49,6 +49,8 @@ export interface Project {
   proposalOverrides: ProposalOverride[];
   attachments: ProjectAttachment[];
   bundledAccessories: BundledAccessory[];
+  coverPhotoUrl?: string;
+  coverPhotoPath?: string;
   status: 'draft' | 'sent' | 'accepted' | 'declined';
   createdAt: string;
   updatedAt: string;
