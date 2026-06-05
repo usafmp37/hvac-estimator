@@ -177,13 +177,14 @@ export default function CoverPage() {
             <div style={{
               flex: 1,
               border: '1px solid #c0c0c0',
-              background: project.coverPhotoUrl ? '#000' : '#f0f4f8',
+              background: 'white',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
               marginBottom: 14,
               minHeight: 200,
               overflow: 'hidden',
+              position: 'relative',
             }}>
               {project.coverPhotoUrl ? (
                 <img
@@ -192,12 +193,12 @@ export default function CoverPage() {
                   style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                 />
               ) : (
-                <div className="no-print" style={{ textAlign: 'center', color: '#94a3b8', padding: 24 }}>
-                  <div style={{ fontSize: 44, lineHeight: 1, marginBottom: 10, opacity: 0.25 }}>🏗</div>
-                  <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5 }}>
-                    No cover photo yet.{' '}
-                    <Link to={`/projects/${id}`} style={{ color: '#3b82f6', fontWeight: 600 }}>
-                      Upload one under Project Details → Drawings
+                /* Screen-only hint — prints as clean empty white box */
+                <div className="no-print" style={{ textAlign: 'center', color: '#cbd5e1', padding: 24 }}>
+                  <p style={{ margin: 0, fontSize: 12 }}>
+                    No photo —{' '}
+                    <Link to={`/projects/${id}`} style={{ color: '#93c5fd' }}>
+                      upload under Project Details → Drawings
                     </Link>
                   </p>
                 </div>
