@@ -2,7 +2,7 @@ import { Link, useParams } from 'react-router-dom';
 import { useStore } from '../store/useStore';
 import { Printer, ChevronRight } from 'lucide-react';
 
-// Reads bottom-to-top on the left margin — first char = bottom, last = top
+// Left-sidebar text: reads bottom-to-top (first char = bottom, last = top)
 const V: React.CSSProperties = {
   writingMode: 'vertical-rl' as const,
   transform: 'rotate(180deg)',
@@ -35,20 +35,24 @@ export default function CoverPage() {
   const estimateDate = fmtDate(project.bidStartDate || project.createdAt);
   const dueDate      = fmtDate(project.bidDueDate);
 
-  // Sidebar project info: write in reverse so first = bottom (reads upward)
+  // Sidebar label: address · builder · project name (first in HTML = bottom when rotated)
   const projectLine = [project.projectAddress, builder?.name, project.projectName]
     .filter(Boolean).join('   ·   ');
+
+  // Letter landscape: 11 × 8.5 in.  Screen preview at max 940px wide → 729px tall.
+  const SCREEN_W  = 940;
+  const SCREEN_H  = Math.round(SCREEN_W * 8.5 / 11); // ≈ 727
 
   return (
     <>
       {/* ── Screen-only toolbar ── */}
       <div
         className="no-print"
-        style={{ padding: '20px 32px 0', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}
+        style={{ padding: '16px 32px', background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}
       >
-        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
           <div>
-            <div style={{ fontSize: 13, color: '#64748b', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }}>
+            <div style={{ fontSize: 13, color: '#64748b', marginBottom: 3, display: 'flex', alignItems: 'center', gap: 4 }}>
               <Link to="/" style={{ color: '#64748b', textDecoration: 'none' }}>Dashboard</Link>
               <ChevronRight size={13} />
               <Link to={`/projects/${id}`} style={{ color: '#64748b', textDecoration: 'none' }}>
@@ -57,121 +61,103 @@ export default function CoverPage() {
               <ChevronRight size={13} />
               Cover Page
             </div>
-            <h1 style={{ margin: 0, fontSize: 22, fontWeight: 700, color: '#1e293b' }}>Cover Page Preview</h1>
+            <h1 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: '#1e293b' }}>Cover Page</h1>
           </div>
           <div style={{ display: 'flex', gap: 10, alignItems: 'center' }}>
             <Link
               to={`/projects/${id}`}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: '#f1f5f9', color: '#1e293b', borderRadius: 7, textDecoration: 'none', fontWeight: 600, fontSize: 13 }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#f1f5f9', color: '#1e293b', borderRadius: 7, textDecoration: 'none', fontWeight: 600, fontSize: 13 }}
             >
               ← Project Details
             </Link>
             <Link
               to={`/projects/${id}/proposal`}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 14px', background: '#eff6ff', color: '#2563eb', borderRadius: 7, textDecoration: 'none', fontWeight: 600, fontSize: 13 }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 14px', background: '#eff6ff', color: '#2563eb', borderRadius: 7, textDecoration: 'none', fontWeight: 600, fontSize: 13 }}
             >
               Proposal →
             </Link>
             <button
               onClick={() => window.print()}
-              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '8px 16px', background: '#1e293b', color: 'white', border: 'none', borderRadius: 7, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
+              style={{ display: 'inline-flex', alignItems: 'center', gap: 6, padding: '7px 16px', background: '#1e293b', color: 'white', border: 'none', borderRadius: 7, fontWeight: 600, fontSize: 13, cursor: 'pointer' }}
             >
               <Printer size={14} /> Print / PDF
             </button>
           </div>
         </div>
-        <p className="no-print" style={{ margin: '0 0 4px', fontSize: 12.5, color: '#94a3b8' }}>
-          Upload a cover photo under <strong>Project Details → Drawings tab</strong> to add a project image.
-          When printing, set paper size to <strong>11 × 17 (Tabloid)</strong> in your print dialog.
+        <p style={{ margin: '6px 0 0', fontSize: 12, color: '#94a3b8' }}>
+          Print as <strong>Letter · Landscape</strong>. Upload a cover photo under <strong>Project Details → Drawings</strong>.
         </p>
       </div>
 
-      {/* ── Cover Document ── */}
+      {/* ── Cover Document (letter landscape preview) ── */}
       <div
         className="cover-outer"
-        style={{ padding: '24px', background: '#e5e7eb', minHeight: '80vh', display: 'flex', justifyContent: 'center' }}
+        style={{ padding: '20px', background: '#d1d5db', display: 'flex', justifyContent: 'center', alignItems: 'flex-start' }}
       >
         <div
           id="cover-doc"
           style={{
             background: 'white',
             width: '100%',
-            maxWidth: 860,
-            /* 11:17 aspect ratio = 860 × 1329 px for screen preview */
-            minHeight: Math.round(860 * 17 / 11),
-            boxShadow: '0 4px 24px rgba(0,0,0,0.18)',
+            maxWidth: SCREEN_W,
+            minHeight: SCREEN_H,
+            boxShadow: '0 4px 24px rgba(0,0,0,0.20)',
             fontFamily: '"Times New Roman", Times, serif',
             display: 'flex',
-            position: 'relative',
           }}
         >
-          {/* ════════════════════════════════════
-              LEFT SIDEBAR  ~0.6in wide
-          ════════════════════════════════════ */}
+          {/* ── Left Sidebar ── */}
           <div style={{
-            width: 52,
+            width: 46,
             borderRight: '1px solid #1e293b',
             flexShrink: 0,
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            padding: '20px 0 20px',
+            padding: '14px 0',
             overflow: 'hidden',
           }}>
-
-            {/* Project / Builder / Address — reads upward from bottom of this block */}
-            <div style={{ ...V, fontSize: 9.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#1a1a1a', lineHeight: 1.4 }}>
+            {/* Project / Builder / Address */}
+            <div style={{ ...V, fontSize: 8.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#1a1a1a', lineHeight: 1.4 }}>
               {projectLine}
             </div>
 
-            {/* Push dates toward the center/lower portion */}
             <div style={{ flex: 1 }} />
 
-            {/* ESTIMATE COMPLETED — date first so it appears at BOTTOM (first read when tilted) */}
-            <div style={{ ...V, lineHeight: 1.5, marginBottom: 10 }}>
-              <span style={{ fontSize: 10, fontWeight: 900, color: '#cc0000' }}>{estimateDate}</span>
-              <span style={{ fontSize: 8, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#1a1a1a' }}>{'   COMPLETED:   ESTIMATE'}</span>
+            {/* Estimate Completed */}
+            <div style={{ ...V, lineHeight: 1.5, marginBottom: 8 }}>
+              <span style={{ fontSize: 9, fontWeight: 900, color: '#cc0000' }}>{estimateDate}</span>
+              <span style={{ fontSize: 7.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#1a1a1a' }}>{'   COMPLETED:   ESTIMATE'}</span>
             </div>
 
-            <div style={{ height: 14 }} />
+            <div style={{ height: 10 }} />
 
-            {/* PROPOSAL DUE DATE — date first, then labels */}
-            <div style={{ ...V, lineHeight: 1.5, marginBottom: 8 }}>
-              <span style={{ fontSize: 8.5, letterSpacing: '0.03em', color: '#555' }}>{'___________   '}</span>
-              <span style={{ fontSize: 8, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#1a1a1a' }}>SUBMITTED:</span>
-              <span style={{ fontSize: 10, fontWeight: 900, color: '#cc0000' }}>{'   '}{dueDate}</span>
-              <span style={{ fontSize: 8, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: '#1a1a1a' }}>{'   DUE DATE:   PROPOSAL'}</span>
+            {/* Proposal Due Date */}
+            <div style={{ ...V, lineHeight: 1.5, marginBottom: 6 }}>
+              <span style={{ fontSize: 7.5, color: '#555' }}>{'_________   '}</span>
+              <span style={{ fontSize: 7.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#1a1a1a' }}>{'SUBMITTED:'}</span>
+              <span style={{ fontSize: 9, fontWeight: 900, color: '#cc0000' }}>{'   '}{dueDate}</span>
+              <span style={{ fontSize: 7.5, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: '#1a1a1a' }}>{'   DUE DATE:   PROPOSAL'}</span>
             </div>
           </div>
 
-          {/* ════════════════════════════════════
-              MAIN CONTENT AREA
-          ════════════════════════════════════ */}
-          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '32px 40px 24px', minWidth: 0 }}>
+          {/* ── Main Content ── */}
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column', padding: '20px 32px 16px', minWidth: 0 }}>
 
-            {/* ── Title Block ── */}
-            <div style={{ textAlign: 'center', marginBottom: 20 }}>
+            {/* Title Block */}
+            <div style={{ textAlign: 'center', marginBottom: 14 }}>
               <div style={{
                 fontFamily: '"Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif',
-                fontWeight: 800,
-                textTransform: 'uppercase',
-                letterSpacing: '0.05em',
-                lineHeight: 1.1,
-                fontSize: 'clamp(28px, 5.5vw, 48px)',
-                color: '#111',
+                fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.05em',
+                lineHeight: 1.1, fontSize: 'clamp(20px, 3.6vw, 36px)', color: '#111',
               }}>
                 {project.projectName || 'Project Name'}
               </div>
               {project.projectAddress && (
                 <div style={{
                   fontFamily: '"Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif',
-                  fontWeight: 700,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  lineHeight: 1.2,
-                  fontSize: 'clamp(24px, 4.8vw, 42px)',
-                  color: '#111',
-                  marginTop: 6,
+                  fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
+                  lineHeight: 1.2, fontSize: 'clamp(18px, 3.1vw, 30px)', color: '#111', marginTop: 4,
                 }}>
                   {project.projectAddress}
                 </div>
@@ -179,29 +165,24 @@ export default function CoverPage() {
               {project.cityState && (
                 <div style={{
                   fontFamily: '"Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif',
-                  fontWeight: 700,
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.05em',
-                  lineHeight: 1.2,
-                  fontSize: 'clamp(22px, 4.3vw, 38px)',
-                  color: '#111',
-                  marginTop: 6,
+                  fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em',
+                  lineHeight: 1.2, fontSize: 'clamp(16px, 2.8vw, 27px)', color: '#111', marginTop: 3,
                 }}>
                   {project.cityState}
                 </div>
               )}
             </div>
 
-            {/* ── Project Photo ── */}
+            {/* Project Photo */}
             <div style={{
               flex: 1,
-              border: '1px solid #c8c8c8',
+              border: '1px solid #c0c0c0',
               background: project.coverPhotoUrl ? '#000' : '#f0f4f8',
               display: 'flex',
               alignItems: 'center',
               justifyContent: 'center',
-              marginBottom: 20,
-              minHeight: 300,
+              marginBottom: 14,
+              minHeight: 200,
               overflow: 'hidden',
             }}>
               {project.coverPhotoUrl ? (
@@ -211,11 +192,10 @@ export default function CoverPage() {
                   style={{ width: '100%', height: '100%', objectFit: 'cover', display: 'block' }}
                 />
               ) : (
-                <div className="no-print" style={{ textAlign: 'center', color: '#94a3b8', padding: 32 }}>
-                  <div style={{ fontSize: 56, lineHeight: 1, marginBottom: 14, opacity: 0.25 }}>🏗</div>
-                  <p style={{ margin: 0, fontSize: 14, lineHeight: 1.5 }}>
-                    No cover photo yet.
-                    <br />
+                <div className="no-print" style={{ textAlign: 'center', color: '#94a3b8', padding: 24 }}>
+                  <div style={{ fontSize: 44, lineHeight: 1, marginBottom: 10, opacity: 0.25 }}>🏗</div>
+                  <p style={{ margin: 0, fontSize: 13, lineHeight: 1.5 }}>
+                    No cover photo yet.{' '}
                     <Link to={`/projects/${id}`} style={{ color: '#3b82f6', fontWeight: 600 }}>
                       Upload one under Project Details → Drawings
                     </Link>
@@ -224,43 +204,36 @@ export default function CoverPage() {
               )}
             </div>
 
-            {/* ── Company Footer ── */}
-            <div style={{ textAlign: 'center', paddingTop: 14, borderTop: '1px solid #ccc' }}>
+            {/* Company Footer */}
+            <div style={{ textAlign: 'center', paddingTop: 10, borderTop: '1px solid #ccc' }}>
               <div style={{
                 fontFamily: '"Palatino Linotype", "Book Antiqua", Palatino, Georgia, serif',
-                fontWeight: 700,
-                letterSpacing: '0.07em',
-                color: '#111',
-                lineHeight: 1.1,
-                fontSize: 'clamp(22px, 4vw, 36px)',
-                marginBottom: 6,
+                fontWeight: 700, letterSpacing: '0.07em', color: '#111',
+                lineHeight: 1.1, fontSize: 'clamp(18px, 3vw, 28px)', marginBottom: 4,
               }}>
-                {/* Stylized "M" in italic */}
                 E.D.{' '}
                 <em style={{ fontStyle: 'italic', fontWeight: 900, fontSize: '1.15em', letterSpacing: '-0.01em' }}>M</em>iller{' '}
                 ENGINEERING
               </div>
               <div style={{
-                fontSize: 'clamp(9px, 1vw, 11px)',
+                fontSize: 'clamp(8px, 0.9vw, 10px)',
                 fontFamily: 'Arial, Helvetica, sans-serif',
-                color: '#444',
-                letterSpacing: '0.06em',
-                fontWeight: 400,
+                color: '#444', letterSpacing: '0.06em',
               }}>
                 EDDIE MILLER P.E. 36543&nbsp;&nbsp;✦&nbsp;&nbsp;9736 BROCKBANK, DALLAS, TEXAS 75220&nbsp;&nbsp;✦&nbsp;&nbsp;214-351-6171&nbsp;&nbsp;✦&nbsp;&nbsp;FIRM# 123232
               </div>
             </div>
 
-          </div>{/* end main content */}
-        </div>{/* end cover-doc */}
-      </div>{/* end cover-outer */}
+          </div>
+        </div>
+      </div>
 
-      {/* ── Print styles ── */}
+      {/* ── Print styles: Letter Landscape ── */}
       <style>{`
         @media print {
           @page {
-            size: 11in 17in portrait;
-            margin: 0.3in 0.25in;
+            size: letter landscape;
+            margin: 0.3in;
           }
           body { background: white !important; }
           aside, nav { display: none !important; }
@@ -268,20 +241,14 @@ export default function CoverPage() {
           .cover-outer {
             background: white !important;
             padding: 0 !important;
-            min-height: 0 !important;
             display: block !important;
           }
           #cover-doc {
             max-width: none !important;
-            width: calc(11in - 0.5in) !important;
-            min-height: calc(17in - 0.6in) !important;
+            width: calc(11in - 0.6in) !important;
+            min-height: calc(8.5in - 0.6in) !important;
             box-shadow: none !important;
             margin: 0 !important;
-          }
-          /* Force the photo area to have some height on print */
-          #cover-doc img {
-            max-height: calc(17in - 5in);
-            object-fit: cover;
           }
         }
       `}</style>
