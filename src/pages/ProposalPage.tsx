@@ -14,6 +14,9 @@ const SECTION_LABELS: Record<SectionKey, string> = {
 
 const SECTIONS: SectionKey[] = ['scopeOfWork', 'equipmentOptions', 'hvacOptions', 'workNotIncluded'];
 
+const GEOTHERMAL_DEFAULT_DESCRIPTION =
+  'Geothermal WaterFurnace Equipment / 27.0 EER / 2 Speed / Variable Volume Air Flow';
+
 // Print target: 11in - 0.3in top/bottom margins = 10.4in @ 96dpi = 998px, minus buffer = 975px
 const PRINT_TARGET_PX = 975;
 
@@ -47,7 +50,10 @@ interface ItemRowProps {
 
 function ItemRow({ item, override, onToggleVisibility, onSaveOverride, isEditing, onEdit, onCancelEdit, showPrices, fs, renderText, priceBelowText, showRowBorder }: ItemRowProps) {
   const visible = override ? override.visible : true;
-  const displayText = override?.text ?? item.text;
+  const savedText = override?.text ?? item.text;
+  const displayText = item.id === 'eq-2' && !savedText.trim()
+    ? GEOTHERMAL_DEFAULT_DESCRIPTION
+    : savedText;
   const displayPrice = override?.price || item.price;
   // If override has explicitly set priceUnit (even to ''), use that; otherwise fall back to item default
   const displayUnit = override && 'priceUnit' in override ? override.priceUnit : item.priceUnit;
